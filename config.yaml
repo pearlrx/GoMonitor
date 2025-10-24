@@ -1,0 +1,15 @@
+database:
+  host: db
+  port: 5432
+  user: postgres
+  password: 12345
+  name: gomonitor
+
+collector:
+  intervalSeconds: 20
+
+#Here are the servers that we will monitor
+servers:
+   - name: backend-server1
+     address: localhost:8080/users
+     description: Сервер back-end

@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: gomonitor-db
+    restart: always
+    environment:
+      POSTGRES_DB: gomonitor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - gomonitor_net
+
+  collector:
+    build: .
+    container_name: gomonitor-collector
+    depends_on:
+      - db
+    environment:
+      GM_CONFIG: /app/config.yaml
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./migrations:/app/migrations
+    networks:
+      - gomonitor_net
+    restart: always
+
+volumes:
+  pgdata:
+
+networks:
+  gomonitor_net:
+    driver: bridge
