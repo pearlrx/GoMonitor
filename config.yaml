@@ -8,8 +8,11 @@ database:
 collector:
   intervalSeconds: 20
 
-#Here are the servers that we will monitor
+#Here are the servers that we will monitor (Testing stand)
 servers:
    - name: backend-server1
      address: localhost:8080/users
-     description: Сервер back-end
+     description: Server back-end with users
+   - name: backend-server2
+     address: localhost:8060
+     description: Test server
