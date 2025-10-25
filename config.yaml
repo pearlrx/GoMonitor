@@ -11,8 +11,8 @@ collector:
 #Here are the servers that we will monitor (Testing stand)
 servers:
    - name: backend-server1
-     address: localhost:8080/users
+     address: host.docker.internal:8080
      description: Server back-end with users
    - name: backend-server2
-     address: localhost:8060
+     address: host.docker.internal:8060
      description: Test server

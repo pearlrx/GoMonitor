@@ -1,6 +1,7 @@
 package main
 
 import (
+	"GoMonitor/internal/alerts"
 	"GoMonitor/internal/collector"
 	"GoMonitor/internal/config"
 	"GoMonitor/internal/storage"
@@ -45,7 +46,6 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	// 1. Сначала добавляем все серверы в БД
 	serverIDs := make(map[string]int)
 	for _, srv := range cfg.Servers {
 		id, err := pg.AddServerIfNotExist(ctx, srv.Name, srv.Address, srv.Description)
@@ -54,18 +54,17 @@ func main() {
 			continue
 		}
 		serverIDs[srv.Name] = id
-		log.Printf("✅ Server registered: %s -> ID %d", srv.Name, id)
+		log.Printf("Server registered: %s -> ID %d", srv.Name, id)
 	}
 
-	// 2. Небольшая пауза чтобы убедиться, что все серверы добавлены
 	time.Sleep(100 * time.Millisecond)
 
-	// 3. Теперь запускаем сборщики метрик
+	// 3. Launching the metric collector
 	for _, srv := range cfg.Servers {
 		id, exists := serverIDs[srv.Name]
 		if !exists {
-			log.Printf("⚠️  Skipping collector for server %s - not registered in DB", srv.Name)
-			continue // пропускаем серверы, которые не удалось добавить
+			log.Printf("Skipping collector for server %s - not registered in DB", srv.Name)
+			continue
 		}
 
 		go func(serverID int, s config.Server) {
@@ -75,7 +74,17 @@ func main() {
 		}(id, srv)
 	}
 
-	log.Printf("🎯 All collectors started. Monitoring %d servers", len(serverIDs))
+	var serversToCheck []alerts.ServerToCheck
+	for _, srv := range cfg.Servers {
+		serversToCheck = append(serversToCheck, alerts.ServerToCheck{
+			Name:    srv.Name,
+			Address: srv.Address,
+		})
+	}
+
+	go alerts.New(serversToCheck, 5*time.Second).Start()
+
+	log.Printf("All collectors and checkers started. Monitoring %d servers", len(serverIDs))
 
 	<-ctx.Done()
 	log.Println("shutting down collectors...")

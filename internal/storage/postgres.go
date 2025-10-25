@@ -15,7 +15,6 @@ type Postgres struct {
 	pool *pgxpool.Pool
 }
 
-// Инициализация подключения
 func NewPostgres(cfg config.DataBaseConfig) (*Postgres, error) {
 	u := &url.URL{
 		Scheme: "postgres",
@@ -49,13 +48,13 @@ func (pg *Postgres) Close() {
 	}
 }
 
-// AddServerIfNotExist добавляет сервер в БД, если его там нет
+// AddServerIfNotExist add server to database
 func (pg *Postgres) AddServerIfNotExist(ctx context.Context, name, ip, description string) (int, error) {
 	var id int
 
 	log.Printf("[AddServerIfNotExist] Проверка существующего сервера: name=%s, ip=%s", name, ip)
 
-	// Сначала пытаемся найти существующий сервер
+	// First we try to find an existing server
 	err := pg.pool.QueryRow(ctx,
 		`SELECT id FROM servers WHERE name = $1 AND ip = $2`,
 		name, ip).Scan(&id)
@@ -67,7 +66,7 @@ func (pg *Postgres) AddServerIfNotExist(ctx context.Context, name, ip, descripti
 
 	log.Printf("[AddServerIfNotExist] Сервер не найден, добавляем новый: name=%s, ip=%s", name, ip)
 
-	// Если сервер не найден, добавляем новый
+	// If the server is not found, add a new one.
 	err = pg.pool.QueryRow(ctx,
 		`INSERT INTO servers (name, ip, description)
          VALUES ($1, $2, $3)
@@ -75,7 +74,7 @@ func (pg *Postgres) AddServerIfNotExist(ctx context.Context, name, ip, descripti
 		name, ip, description).Scan(&id)
 
 	if err != nil {
-		// Если возникла ошибка конфликта (дубликат), пытаемся снова найти
+		// If a conflict error (duplicate) occurs, try to find it again
 		if isDuplicateKeyError(err) {
 			log.Printf("[AddServerIfNotExist] Обнаружен дубликат, повторный поиск: name=%s", name)
 			return pg.AddServerIfNotExist(ctx, name, ip, description)
@@ -88,7 +87,7 @@ func (pg *Postgres) AddServerIfNotExist(ctx context.Context, name, ip, descripti
 	return id, nil
 }
 
-// SaveMetric сохраняет метрику в базу данных
+// SaveMetric saves the metric to the database
 func (pg *Postgres) SaveMetric(ctx context.Context, objectType string, objectID int, metricName string, value float64, ts time.Time) error {
 	_, err := pg.pool.Exec(ctx,
 		`INSERT INTO metrics (object_type, object_id, metric_name, value, timestamp)
@@ -104,22 +103,22 @@ func (pg *Postgres) SaveMetric(ctx context.Context, objectType string, objectID 
 	return nil
 }
 
-// Проверка на ошибку дубликата ключа в PostgreSQL
+// Checking for duplicate key errors in PostgreSQL
 func isDuplicateKeyError(err error) bool {
 	if err == nil {
 		return false
 	}
 
 	errorStr := err.Error()
-	// Проверяем различные варианты ошибок дубликата
+	// We check various duplicate error options
 	return strings.Contains(errorStr, "duplicate key value") ||
 		strings.Contains(errorStr, "23505") || // PostgreSQL error code for unique violation
 		strings.Contains(errorStr, "already exists")
 }
 
-// Дополнительные методы для проверки состояния
+// Additional methods for checking the status
 
-// CheckServerExists проверяет существование сервера по ID
+// CheckServerExists checks the existence of a server by ID
 func (pg *Postgres) CheckServerExists(ctx context.Context, serverID int) (bool, error) {
 	var exists bool
 	err := pg.pool.QueryRow(ctx,
@@ -128,7 +127,7 @@ func (pg *Postgres) CheckServerExists(ctx context.Context, serverID int) (bool, 
 	return exists, err
 }
 
-// GetServerID получает ID сервера по имени и IP
+// GetServerID gets the server ID by name and IP
 func (pg *Postgres) GetServerID(ctx context.Context, name, ip string) (int, error) {
 	var id int
 	err := pg.pool.QueryRow(ctx,

@@ -6,7 +6,8 @@ import (
 	"os"
 )
 
-// function for migration tables
+// RunMigrations Function for migration tables
+
 func (pg *Postgres) RunMigrations(ctx context.Context, path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
